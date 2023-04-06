@@ -2,11 +2,14 @@
 
 const express = require("express");
 const { NotFoundError } = require("./expressError");
+// const db = require("./db");
+const companies = require("./routes/companies");
 
 const app = express();
 
 app.use(express.json());
 
+app.use('/companies', companies);
 
 /** 404 handler: matches unmatched routes; raises NotFoundError. */
 app.use(function (req, res, next) {
