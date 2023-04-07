@@ -15,22 +15,30 @@ router.get("/", async function (req, res) {
   return res.json({ companies });
 });
 
-
-/** Returns company object at code: {company: {code, name, description}} */
+/** Returns company object at code:
+ * {company: {code, name, description, invoices: [id, ...]}} */
 router.get("/:code", async function (req, res) {
-  const result = await db.query(
+  const cResult = await db.query(
     `SELECT code, name, description
       FROM companies
       WHERE code = $1`,
     [req.params.code]
   );
 
-  const company = result.rows[0];
+  const company = cResult.rows[0];
   if (!company) throw new NotFoundError("Company not found.");
 
+  const iResult = await db.query(
+    `SELECT id
+    FROM invoices
+    JOIN companies ON companies.code = invoices.comp_code
+    AND companies.code = $1`,
+    [req.params.code]
+  );
+  const invoices = iResult.rows;
+  company.invoices = invoices.map(inv => inv.id)
   return res.json({ company });
 });
-
 
 /**
  * Adds a company to biztime.
@@ -50,10 +58,8 @@ router.post("/", async function (req, res) {
   );
 
   const company = result.rows[0];
-
   return res.status(201).json({ company });
 });
-
 
 /**
  * Edits an exisiting company
@@ -78,21 +84,18 @@ router.put("/:code", async function (req, res) {
   return res.json({ company });
 });
 
-
 /** Deletes company with given code,
  * returns: {status: "deleted"} */
-router.delete('/:code', async function (req, res) {
-
+router.delete("/:code", async function (req, res) {
   const result = await db.query(
     `DELETE FROM companies WHERE code = $1
     RETURNING code`,
-    [req.params.code],
+    [req.params.code]
   );
 
   const company = result.rows[0];
   if (!company) throw new NotFoundError("Company not found.");
   return res.json({ status: "deleted" });
 });
-
 
 module.exports = router;
