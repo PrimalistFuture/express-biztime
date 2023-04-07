@@ -22,34 +22,38 @@ router.get("/", async function (req, res) {
  */
 router.get("/:id", async function (req, res) {
   const invoiceResult = await db.query(
-    `SELECT id, amt, paid, add_date, paid_date
+    `SELECT id, amt, paid, add_date, paid_date, comp_code
     FROM invoices
     WHERE id = $1`,
     [req.params.id]
   );
 
+  const invoice = invoiceResult.rows[0];
+  if (!invoice) throw new NotFoundError("Invoice not found.");
+
   const companyResult = await db.query(
     `SELECT code, name, description
     FROM companies
-    JOIN invoices
-    ON companies.code = invoices.comp_code
-    AND invoices.id = $1
-    GROUP BY code`,
-    [req.params.id]
+    WHERE code = $1`,
+    [invoice.comp_code]
   );
 
-  const invoice = invoiceResult.rows[0];
-  if (!invoice) throw new NotFoundError("Invoice not found.");
   const company = companyResult.rows[0];
+  delete invoice.comp_code;
   invoice.company = company;
+
   return res.json({ invoice });
 });
 
 
-/** Add an invoice */
+/** Add an invoice.
+ * Params: {comp_code, amt}
+ * Returns {invoice: {id, comp_code, amt, paid, add_date, paid_date}}
+ */
 router.post("/", async function (req, res) {
   const { comp_code, amt } = req.body;
-  if (!comp_code || !amt) throw new BadRequestError("Invalid request data.");
+  if (!comp_code || isNaN(amt)) throw new BadRequestError("Invalid request data.");
+
 
   const result = await db.query(
     `INSERT INTO invoices (comp_code, amt)

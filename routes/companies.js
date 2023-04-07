@@ -36,7 +36,7 @@ router.get("/:code", async function (req, res) {
     [req.params.code]
   );
   const invoices = iResult.rows;
-  company.invoices = invoices.map(inv => inv.id)
+  company.invoices = invoices.map((inv) => inv.id);
   return res.json({ company });
 });
 
